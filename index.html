@@ -19,7 +19,7 @@
   <style>
     .dark {
       --color-background: #181C14;
-      --color-text: #ECDFCC;
+      --color-text: #D8CBB8; /* Slightly darker shade for better readability */
       --color-card: #697565;
       --color-accent: #3C3D37;
     }
@@ -42,7 +42,9 @@
       const now = new Date();
       const hours = String(now.getHours()).padStart(2, "0");
       const minutes = String(now.getMinutes()).padStart(2, "0");
-      return `${hours}:${minutes}`;
+      const seconds = String(now.getSeconds()).padStart(2, "0");
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      return { time: `${hours}:${minutes}:${seconds}`, timezone };
     };
 
     const App = () => {
@@ -51,11 +53,11 @@
       const [activeTab, setActiveTab] = useState("schedule");
       const [currentTime, setCurrentTime] = useState(getCurrentTime());
 
-      // Update current time every minute
+      // Update current time every second
       useEffect(() => {
         const interval = setInterval(() => {
           setCurrentTime(getCurrentTime());
-        }, 60000);
+        }, 1000);
         return () => clearInterval(interval);
       }, []);
 
@@ -161,13 +163,13 @@
 
       const isTaskActive = (timeRange) => {
         const [start, end] = timeRange.split(" - ");
-        const now = currentTime;
+        const now = currentTime.time;
         return now >= start && now <= end;
       };
 
       const getTimeStatus = (timeRange) => {
         const [start, end] = timeRange.split(" - ");
-        const now = currentTime;
+        const now = currentTime.time;
 
         if (now < start) {
           const diff = timeDifferenceInMinutes(now, start);
@@ -186,7 +188,7 @@
       return (
         <div className={`
           min-h-screen 
-          ${isDarkMode ? "bg-[#181C14] text-[#ECDFCC]" : "bg-gray-100 text-gray-800"}
+          ${isDarkMode ? "bg-[#181C14] text-[#D8CBB8]" : "bg-gray-100 text-gray-800"}
         `}>
           <div className="max-w-4xl mx-auto p-4">
             {/* Header + Dark Mode Toggle */}
@@ -194,10 +196,20 @@
               <h1 className="text-3xl font-bold">MLE Schedule Visualizer</h1>
               <button
                 onClick={() => setIsDarkMode(!isDarkMode)}
-                className="px-3 py-2 rounded bg-gray-200 dark:bg-[#3C3D37] dark:text-[#ECDFCC] hover:bg-gray-300 dark:hover:bg-[#697565]"
+                className="px-3 py-2 rounded bg-gray-200 dark:bg-[#3C3D37] dark:text-[#D8CBB8] hover:bg-gray-300 dark:hover:bg-[#697565]"
               >
                 {isDarkMode ? "Light Mode" : "Dark Mode"}
               </button>
+            </div>
+
+            {/* Clock with Timezone */}
+            <div className="mb-6 text-center bg-[#697565] dark:bg-[#697565] p-4 rounded-lg shadow">
+              <div className="text-4xl font-bold dark:text-[#D8CBB8]">
+                {currentTime.time}
+              </div>
+              <div className="text-sm text-gray-400 dark:text-[#D8CBB8]">
+                Timezone: {currentTime.timezone}
+              </div>
             </div>
 
             {/* Tabs */}
@@ -208,7 +220,7 @@
                   p-2 rounded 
                   ${activeTab === "schedule" 
                     ? "bg-blue-500 text-white" 
-                    : "bg-gray-200 dark:bg-[#3C3D37] dark:text-[#ECDFCC]"}
+                    : "bg-gray-200 dark:bg-[#3C3D37] dark:text-[#D8CBB8]"}
                 `}
               >
                 Daily Schedule
@@ -219,7 +231,7 @@
                   p-2 rounded 
                   ${activeTab === "focus" 
                     ? "bg-blue-500 text-white" 
-                    : "bg-gray-200 dark:bg-[#3C3D37] dark:text-[#ECDFCC]"}
+                    : "bg-gray-200 dark:bg-[#3C3D37] dark:text-[#D8CBB8]"}
                 `}
               >
                 Daily Focus Areas
@@ -228,10 +240,10 @@
 
             {/* Schedule View */}
             {activeTab === "schedule" && (
-              <div className="bg-white dark:bg-[#697565] rounded-lg shadow p-4">
+              <div className="bg-[#697565] dark:bg-[#697565] rounded-lg shadow p-4">
                 {Object.entries(getSchedule()).map(([timeBlock, activities]) => (
                   <div key={timeBlock} className="mb-6">
-                    <h3 className="font-bold text-lg mb-2 dark:text-[#ECDFCC]">{timeBlock}</h3>
+                    <h3 className="font-bold text-lg mb-2 dark:text-[#D8CBB8]">{timeBlock}</h3>
                     <div className="grid grid-cols-1 gap-2">
                       {activities.map((activity, index) => (
                         <div
@@ -242,10 +254,10 @@
                             ${isTaskActive(activity.time) ? "ring-2 ring-blue-500" : ""}
                           `}
                         >
-                          <div className="font-medium dark:text-[#ECDFCC]">{activity.time}</div>
-                          <div className="flex-1 sm:mx-4 dark:text-[#ECDFCC]">{activity.activity}</div>
-                          <div className="text-sm dark:text-[#ECDFCC]">{activity.category}</div>
-                          <div className="mt-1 sm:mt-0 sm:ml-4 text-xs text-gray-600 dark:text-[#ECDFCC]">
+                          <div className="font-medium dark:text-[#D8CBB8]">{activity.time}</div>
+                          <div className="flex-1 sm:mx-4 dark:text-[#D8CBB8]">{activity.activity}</div>
+                          <div className="text-sm dark:text-[#D8CBB8]">{activity.category}</div>
+                          <div className="mt-1 sm:mt-0 sm:ml-4 text-xs text-gray-400 dark:text-[#D8CBB8]">
                             {getTimeStatus(activity.time)}
                           </div>
                         </div>
@@ -258,7 +270,7 @@
 
             {/* Focus Areas View */}
             {activeTab === "focus" && (
-              <div className="bg-white dark:bg-[#697565] rounded-lg shadow p-4">
+              <div className="bg-[#697565] dark:bg-[#697565] rounded-lg shadow p-4">
                 <div className="grid grid-cols-1 gap-4">
                   <div className="flex space-x-2 mb-4 overflow-x-auto">
                     {Object.keys(dailyFocus).map((day) => (
@@ -269,7 +281,7 @@
                           px-3 py-1 rounded flex-shrink-0
                           ${activeDay === day 
                             ? "bg-blue-500 text-white" 
-                            : "bg-gray-100 dark:bg-[#3C3D37] dark:text-[#ECDFCC] hover:bg-gray-200 dark:hover:bg-[#697565]"}
+                            : "bg-gray-100 dark:bg-[#3C3D37] dark:text-[#D8CBB8] hover:bg-gray-200 dark:hover:bg-[#697565]"}
                         `}
                       >
                         {day.charAt(0).toUpperCase() + day.slice(1)}
@@ -279,9 +291,9 @@
 
                   <div className="grid grid-cols-1 gap-3">
                     {Object.entries(dailyFocus[activeDay]).map(([focus, activity]) => (
-                      <div key={focus} className="p-4 bg-gray-50 dark:bg-[#3C3D37] rounded border dark:border-[#697565]">
-                        <h4 className="font-medium text-gray-700 dark:text-[#ECDFCC]">{focus}</h4>
-                        <p className="mt-1 text-gray-600 dark:text-[#ECDFCC]">{activity}</p>
+                      <div key={focus} className="p-4 bg-[#3C3D37] dark:bg-[#3C3D37] rounded border dark:border-[#697565]">
+                        <h4 className="font-medium text-gray-700 dark:text-[#D8CBB8]">{focus}</h4>
+                        <p className="mt-1 text-gray-600 dark:text-[#D8CBB8]">{activity}</p>
                       </div>
                     ))}
                   </div>
@@ -291,16 +303,16 @@
 
             {/* Legend */}
             <div className="mt-4 grid grid-cols-4 gap-2">
-              <div className="p-2 bg-blue-100 dark:bg-[#3C3D37] rounded text-sm text-center dark:text-[#ECDFCC]">Work</div>
-              <div className="p-2 bg-green-100 dark:bg-[#3C3D37] rounded text-sm text-center dark:text-[#ECDFCC]">Learning</div>
-              <div className="p-2 bg-yellow-100 dark:bg-[#3C3D37] rounded text-sm text-center dark:text-[#ECDFCC]">Break</div>
-              <div className="p-2 bg-purple-100 dark:bg-[#3C3D37] rounded text-sm text-center dark:text-[#ECDFCC]">Personal</div>
+              <div className="p-2 bg-blue-100 dark:bg-[#3C3D37] rounded text-sm text-center dark:text-[#D8CBB8]">Work</div>
+              <div className="p-2 bg-green-100 dark:bg-[#3C3D37] rounded text-sm text-center dark:text-[#D8CBB8]">Learning</div>
+              <div className="p-2 bg-yellow-100 dark:bg-[#3C3D37] rounded text-sm text-center dark:text-[#D8CBB8]">Break</div>
+              <div className="p-2 bg-purple-100 dark:bg-[#3C3D37] rounded text-sm text-center dark:text-[#D8CBB8]">Personal</div>
             </div>
 
             {/* Contact / Links Section */}
-            <div className="mt-8 bg-gray-50 dark:bg-[#697565] p-6 rounded-lg shadow">
-              <h2 className="text-2xl font-bold text-center mb-4 dark:text-[#ECDFCC]">Connect with Me</h2>
-              <p className="text-center text-gray-600 dark:text-[#ECDFCC] mb-4">
+            <div className="mt-8 bg-[#697565] dark:bg-[#697565] p-6 rounded-lg shadow">
+              <h2 className="text-2xl font-bold text-center mb-4 dark:text-[#D8CBB8]">Connect with Me</h2>
+              <p className="text-center text-gray-600 dark:text-[#D8CBB8] mb-4">
                 Have feedback, suggestions, or need support? Reach out through any platform below.
               </p>
               <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center space-y-2 sm:space-y-0 sm:space-x-4">
