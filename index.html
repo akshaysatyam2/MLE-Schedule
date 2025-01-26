@@ -1,49 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MLE Schedule Visualizer</title>
+  
+  <!-- React & React-DOM from CDN -->
   <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+  
+  <!-- Babel for in-browser transpile (development/demo only) -->
   <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+  
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Page Styling (Optional) -->
+  <style>
+    /* You can add any custom styling here if needed */
+  </style>
 </head>
-<body>
+
+<body class="bg-gray-100">
   <div id="root"></div>
 
   <script type="text/babel">
     const { useState, useEffect } = React;
 
     const ScheduleVisualizer = () => {
-      // Get the current day of the week (e.g., "monday", "tuesday", etc.)
+      // --- Dark Mode State ---
+      const [isDarkMode, setIsDarkMode] = useState(false);
+
+      // --- Functions for Date/Time ---
       const getCurrentDay = () => {
-        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        const today = new Date().getDay(); // Returns 0 (Sunday) to 6 (Saturday)
-        return days[today];
+        const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+        return days[new Date().getDay()];
       };
 
-      // Get the current time in HH:MM format
       const getCurrentTime = () => {
         const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, "0");
+        const minutes = String(now.getMinutes()).padStart(2, "0");
         return `${hours}:${minutes}`;
       };
 
+      // Parse time "HH:MM" and return minutes from midnight
+      const getMinutesFromMidnight = (timeStr) => {
+        const [hh, mm] = timeStr.split(":").map(Number);
+        return hh * 60 + mm;
+      };
+
+      // Calculate the difference in minutes between two time strings
+      const timeDifferenceInMinutes = (timeA, timeB) => {
+        return getMinutesFromMidnight(timeB) - getMinutesFromMidnight(timeA);
+      };
+
+      // --- State Hooks ---
       const [activeDay, setActiveDay] = useState(getCurrentDay());
-      const [activeTab, setActiveTab] = useState('schedule');
+      const [activeTab, setActiveTab] = useState("schedule");
       const [currentTime, setCurrentTime] = useState(getCurrentTime());
 
       // Update current time every minute
       useEffect(() => {
         const interval = setInterval(() => {
           setCurrentTime(getCurrentTime());
-        }, 60000); // Update every minute
+        }, 60000);
         return () => clearInterval(interval);
       }, []);
 
-      // Weekday Schedule (Monday to Friday)
+      // --- Schedules ---
       const weekdaySchedule = {
         "Early Morning": [
           { time: "06:00 - 06:30", activity: "Morning Routine", category: "Personal" },
@@ -66,7 +91,6 @@
         ]
       };
 
-      // Weekend Schedule (Saturday and Sunday)
       const weekendSchedule = {
         "Morning": [
           { time: "08:00 - 09:00", activity: "Morning Routine", category: "Personal" },
@@ -86,7 +110,7 @@
         ]
       };
 
-      // Daily Focus Areas
+      // --- Daily Focus ---
       const dailyFocus = {
         monday: {
           "Morning Study": "CV Research Papers (Object Detection)",
@@ -125,62 +149,342 @@
         }
       };
 
+      // --- Utilities ---
       const getCategoryColor = (category) => {
         const colors = {
-          'Work': 'bg-blue-100 border-blue-200',
-          'Learning': 'bg-green-100 border-green-200',
-          'Break': 'bg-yellow-100 border-yellow-200',
-          'Personal': 'bg-purple-100 border-purple-200'
+          Work:    "bg-blue-100 border-blue-300 dark:bg-blue-900 dark:border-blue-400",
+          Learning:"bg-green-100 border-green-300 dark:bg-green-900 dark:border-green-400",
+          Break:   "bg-yellow-100 border-yellow-300 dark:bg-yellow-900 dark:border-yellow-400",
+          Personal:"bg-purple-100 border-purple-300 dark:bg-purple-900 dark:border-purple-400"
         };
-        return colors[category] || 'bg-gray-100';
+        return colors[category] || "bg-gray-100 dark:bg-gray-700";
       };
 
       // Check if a task is currently active
       const isTaskActive = (timeRange) => {
-        const [start, end] = timeRange.split(' - ');
-        return currentTime >= start && currentTime <= end;
+        const [start, end] = timeRange.split(" - ");
+        const now = currentTime;
+        return now >= start && now <= end;
       };
 
-      // Get the schedule based on the day
+      // For display: minutes to next activity or "In progress"
+      const getTimeStatus = (timeRange) => {
+        const [start, end] = timeRange.split(" - ");
+        const now = currentTime;
+
+        if (now < start) {
+          // Not started -> minutes until it starts
+          const diff = timeDifferenceInMinutes(now, start);
+          return `${diff} min to start`;
+        } else if (now > end) {
+          // Finished
+          return "Completed";
+        } else {
+          // Currently happening
+          return "In Progress";
+        }
+      };
+
+      // Return the relevant schedule for the active day
       const getSchedule = () => {
-        return ['saturday', 'sunday'].includes(activeDay) ? weekendSchedule : weekdaySchedule;
+        return ["saturday", "sunday"].includes(activeDay) ? weekendSchedule : weekdaySchedule;
       };
 
       return (
-        <div className="max-w-4xl mx-auto p-4">
-          <h1 className="text-3xl font-bold text-center mb-6">MLE Schedule Visualizer</h1>
-          <div className="w-full">
-            <div className="grid w-full grid-cols-2 gap-2 mb-4">
+        <div className={`
+          min-h-screen 
+          ${isDarkMode ? "bg-gray-900 text-gray-200" : "bg-gray-100 text-gray-800"}
+        `}>
+          <div className="max-w-4xl mx-auto p-4">
+            {/* Header + Dark Mode Toggle */}
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-3xl font-bold">MLE Schedule Visualizer</h1>
               <button
-                onClick={() => setActiveTab('schedule')}
-                className={`p-2 rounded ${activeTab === 'schedule' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+              >
+                {isDarkMode ? "Light Mode" : "Dark Mode"}
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <button
+                onClick={() => setActiveTab("schedule")}
+                className={`
+                  p-2 rounded 
+                  ${activeTab === "schedule" 
+                    ? "bg-blue-500 text-white" 
+                    : "bg-gray-200 dark:bg-gray-600 dark:text-gray-200"}
+                `}
               >
                 Daily Schedule
               </button>
               <button
-                onClick={() => setActiveTab('focus')}
-                className={`p-2 rounded ${activeTab === 'focus' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                onClick={() => setActiveTab("focus")}
+                className={`
+                  p-2 rounded 
+                  ${activeTab === "focus" 
+                    ? "bg-blue-500 text-white" 
+                    : "bg-gray-200 dark:bg-gray-600 dark:text-gray-200"}
+                `}
               >
                 Daily Focus Areas
               </button>
             </div>
 
-            {activeTab === 'schedule' && (
-              <div className="bg-white rounded-lg shadow p-4">
+            {/* Local state for which tab is active */}
+            <Content activeDay={activeDay} setActiveDay={setActiveDay} />
+
+          </div>
+        </div>
+      );
+
+      function Content({ activeDay, setActiveDay }) {
+        // local state to show which tab's content
+        const [activeTab, setActiveTabState] = useState("schedule");
+
+        // Because we used setActiveTab above, let's unify that:
+        useEffect(() => {
+          // watch the parent's activeTab for changes (only for demonstration if you want to unify)
+        }, []);
+
+        // We'll just store the actual tab state in the parent for simplicity:
+        // (In practice, you might pass the parent's activeTab as prop or unify them.)
+        const [parentTab, setParentTab] = useState("schedule");
+
+        // Actually, let's just pull activeTab from parent's state if you want:
+        // But the original code had everything in one component.
+        // Let’s keep it simpler and just define the tabs inside the same component 
+        // (removing the separate <Content> approach to avoid confusion).
+        return null;
+      };
+    };
+
+    // Because we used a second component approach in the snippet above, 
+    // let's revert to a single component with all logic to keep it simpler:
+
+  </script>
+
+  <!-- Single-Component Version for Simplicity -->
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const App = () => {
+      const [isDarkMode, setIsDarkMode] = useState(false);
+      const [activeDay, setActiveDay] = useState(getCurrentDay());
+      const [activeTab, setActiveTab] = useState("schedule");
+      const [currentTime, setCurrentTime] = useState(getCurrentTime());
+
+      // Update current time every minute
+      useEffect(() => {
+        const interval = setInterval(() => {
+          setCurrentTime(getCurrentTime());
+        }, 60000);
+        return () => clearInterval(interval);
+      }, []);
+
+      // Schedules
+      const weekdaySchedule = {
+        "Early Morning": [
+          { time: "06:00 - 06:30", activity: "Morning Routine", category: "Personal" },
+          { time: "06:30 - 07:30", activity: "Core Learning Session (CV/NLP Papers)", category: "Learning" },
+          { time: "07:30 - 08:15", activity: "Preparation for Work", category: "Personal" },
+          { time: "08:15 - 09:00", activity: "Commute (Technical Content)", category: "Learning" }
+        ],
+        "Work Hours": [
+          { time: "09:00 - 09:30", activity: "Daily Planning", category: "Work" },
+          { time: "09:30 - 13:00", activity: "Core Work Hours", category: "Work" },
+          { time: "13:00 - 14:00", activity: "Lunch & Light Reading", category: "Break" },
+          { time: "14:00 - 18:00", activity: "Afternoon Work Session", category: "Work" }
+        ],
+        "Evening": [
+          { time: "18:00 - 19:00", activity: "Commute & Break", category: "Break" },
+          { time: "19:00 - 20:00", activity: "Mathematics (Linear Algebra/Calculus)", category: "Learning" },
+          { time: "20:00 - 21:00", activity: "Dinner", category: "Personal" },
+          { time: "21:00 - 22:00", activity: "Focused Development (Personal Projects)", category: "Learning" },
+          { time: "22:00 - 22:30", activity: "Wind Down", category: "Personal" }
+        ]
+      };
+
+      const weekendSchedule = {
+        "Morning": [
+          { time: "08:00 - 09:00", activity: "Morning Routine", category: "Personal" },
+          { time: "09:00 - 10:30", activity: "Skill Development (CV/NLP Papers)", category: "Learning" },
+          { time: "10:30 - 11:00", activity: "Break", category: "Break" }
+        ],
+        "Afternoon": [
+          { time: "11:00 - 13:00", activity: "Personal Projects (ML Models)", category: "Learning" },
+          { time: "13:00 - 14:00", activity: "Lunch", category: "Break" },
+          { time: "14:00 - 16:00", activity: "Mathematics (Probability/Optimization)", category: "Learning" }
+        ],
+        "Evening": [
+          { time: "16:00 - 17:00", activity: "Exercise", category: "Personal" },
+          { time: "17:00 - 18:00", activity: "Reading Research Papers (CV/NLP)", category: "Learning" },
+          { time: "18:00 - 19:00", activity: "Dinner", category: "Personal" },
+          { time: "19:00 - 21:00", activity: "Relaxation", category: "Personal" }
+        ]
+      };
+
+      const dailyFocus = {
+        monday: {
+          "Morning Study": "CV Research Papers (Object Detection)",
+          "Work Focus": "Apply New Learnings to Work Projects",
+          "Evening Focus": "Mathematics (Linear Algebra)"
+        },
+        tuesday: {
+          "Morning Study": "NLP Research Papers (Transformers)",
+          "Work Focus": "Performance Optimization",
+          "Evening Focus": "Mathematics (Calculus)"
+        },
+        wednesday: {
+          "Morning Study": "System Design Patterns for ML Systems",
+          "Work Focus": "Architecture Improvements",
+          "Evening Focus": "Mathematics (Probability)"
+        },
+        thursday: {
+          "Morning Study": "Interview Preparation (ML Algorithms)",
+          "Work Focus": "Code Quality & Documentation",
+          "Evening Focus": "Mathematics (Optimization)"
+        },
+        friday: {
+          "Morning Study": "Industry Best Practices (MLOps)",
+          "Work Focus": "Project Wrap-up",
+          "Evening Focus": "Mathematics (Review)"
+        },
+        saturday: {
+          "Morning Study": "Extended Learning Session (CV/NLP Papers)",
+          "Work Focus": "Personal Projects",
+          "Evening Focus": "Mathematics (Problem Solving)"
+        },
+        sunday: {
+          "Morning Study": "Week Review & Planning",
+          "Work Focus": "Roadmap Updates",
+          "Evening Focus": "Rest & Preparation"
+        }
+      };
+
+      // --- Utility Functions
+      function getCurrentDay() {
+        const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+        return days[new Date().getDay()];
+      }
+
+      function getCurrentTime() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, "0");
+        const minutes = String(now.getMinutes()).padStart(2, "0");
+        return `${hours}:${minutes}`;
+      }
+
+      const getMinutesFromMidnight = (timeStr) => {
+        const [hh, mm] = timeStr.split(":").map(Number);
+        return hh * 60 + mm;
+      };
+
+      const timeDifferenceInMinutes = (timeA, timeB) => {
+        return getMinutesFromMidnight(timeB) - getMinutesFromMidnight(timeA);
+      };
+
+      const getCategoryColor = (category) => {
+        const colors = {
+          Work:    "bg-blue-100 border-blue-300 dark:bg-blue-900 dark:border-blue-400",
+          Learning:"bg-green-100 border-green-300 dark:bg-green-900 dark:border-green-400",
+          Break:   "bg-yellow-100 border-yellow-300 dark:bg-yellow-900 dark:border-yellow-400",
+          Personal:"bg-purple-100 border-purple-300 dark:bg-purple-900 dark:border-purple-400"
+        };
+        return colors[category] || "bg-gray-100 dark:bg-gray-700";
+      };
+
+      const isTaskActive = (timeRange) => {
+        const [start, end] = timeRange.split(" - ");
+        const now = currentTime;
+        return now >= start && now <= end;
+      };
+
+      const getTimeStatus = (timeRange) => {
+        const [start, end] = timeRange.split(" - ");
+        const now = currentTime;
+
+        if (now < start) {
+          const diff = timeDifferenceInMinutes(now, start);
+          return `${diff} min to start`;
+        } else if (now > end) {
+          return "Completed";
+        } else {
+          return "In Progress";
+        }
+      };
+
+      const getSchedule = () => {
+        return ["saturday", "sunday"].includes(activeDay) ? weekendSchedule : weekdaySchedule;
+      };
+
+      return (
+        <div className={`
+          min-h-screen 
+          ${isDarkMode ? "bg-gray-900 text-gray-200" : "bg-gray-100 text-gray-800"}
+        `}>
+          <div className="max-w-4xl mx-auto p-4">
+            {/* Header + Dark Mode Toggle */}
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-3xl font-bold">MLE Schedule Visualizer</h1>
+              <button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+              >
+                {isDarkMode ? "Light Mode" : "Dark Mode"}
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <button
+                onClick={() => setActiveTab("schedule")}
+                className={`
+                  p-2 rounded 
+                  ${activeTab === "schedule" 
+                    ? "bg-blue-500 text-white" 
+                    : "bg-gray-200 dark:bg-gray-600 dark:text-gray-200"}
+                `}
+              >
+                Daily Schedule
+              </button>
+              <button
+                onClick={() => setActiveTab("focus")}
+                className={`
+                  p-2 rounded 
+                  ${activeTab === "focus" 
+                    ? "bg-blue-500 text-white" 
+                    : "bg-gray-200 dark:bg-gray-600 dark:text-gray-200"}
+                `}
+              >
+                Daily Focus Areas
+              </button>
+            </div>
+
+            {/* Schedule View */}
+            {activeTab === "schedule" && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                 {Object.entries(getSchedule()).map(([timeBlock, activities]) => (
                   <div key={timeBlock} className="mb-6">
-                    <h3 className="font-bold text-lg mb-2">{timeBlock}</h3>
+                    <h3 className="font-bold text-lg mb-2 dark:text-gray-100">{timeBlock}</h3>
                     <div className="grid grid-cols-1 gap-2">
                       {activities.map((activity, index) => (
-                        <div 
+                        <div
                           key={index}
-                          className={`p-3 rounded border ${getCategoryColor(activity.category)} flex justify-between items-center ${
-                            isTaskActive(activity.time) ? 'ring-2 ring-blue-500' : ''
-                          }`}
+                          className={`
+                            p-3 rounded border flex flex-col sm:flex-row sm:justify-between sm:items-center
+                            ${getCategoryColor(activity.category)}
+                            ${isTaskActive(activity.time) ? "ring-2 ring-blue-500" : ""}
+                          `}
                         >
-                          <span className="font-medium">{activity.time}</span>
-                          <span className="flex-1 mx-4">{activity.activity}</span>
-                          <span className="text-sm">{activity.category}</span>
+                          <div className="font-medium">{activity.time}</div>
+                          <div className="flex-1 sm:mx-4">{activity.activity}</div>
+                          <div className="text-sm">{activity.category}</div>
+                          <div className="mt-1 sm:mt-0 sm:ml-4 text-xs text-gray-600 dark:text-gray-300">
+                            {getTimeStatus(activity.time)}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -189,19 +493,21 @@
               </div>
             )}
 
-            {activeTab === 'focus' && (
-              <div className="bg-white rounded-lg shadow p-4">
+            {/* Focus Areas View */}
+            {activeTab === "focus" && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                 <div className="grid grid-cols-1 gap-4">
                   <div className="flex space-x-2 mb-4 overflow-x-auto">
                     {Object.keys(dailyFocus).map((day) => (
                       <button
                         key={day}
                         onClick={() => setActiveDay(day)}
-                        className={`px-3 py-1 rounded flex-shrink-0 ${
-                          activeDay === day 
-                            ? 'bg-blue-500 text-white' 
-                            : 'bg-gray-100 hover:bg-gray-200'
-                        }`}
+                        className={`
+                          px-3 py-1 rounded flex-shrink-0
+                          ${activeDay === day 
+                            ? "bg-blue-500 text-white" 
+                            : "bg-gray-100 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"}
+                        `}
                       >
                         {day.charAt(0).toUpperCase() + day.slice(1)}
                       </button>
@@ -210,28 +516,85 @@
 
                   <div className="grid grid-cols-1 gap-3">
                     {Object.entries(dailyFocus[activeDay]).map(([focus, activity]) => (
-                      <div key={focus} className="p-4 bg-gray-50 rounded border">
-                        <h4 className="font-medium text-gray-700">{focus}</h4>
-                        <p className="mt-1 text-gray-600">{activity}</p>
+                      <div key={focus} className="p-4 bg-gray-50 dark:bg-gray-700 rounded border dark:border-gray-600">
+                        <h4 className="font-medium text-gray-700 dark:text-gray-200">{focus}</h4>
+                        <p className="mt-1 text-gray-600 dark:text-gray-300">{activity}</p>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
             )}
-          </div>
 
-          <div className="mt-4 grid grid-cols-4 gap-2">
-            <div className="p-2 bg-blue-100 rounded text-sm text-center">Work</div>
-            <div className="p-2 bg-green-100 rounded text-sm text-center">Learning</div>
-            <div className="p-2 bg-yellow-100 rounded text-sm text-center">Break</div>
-            <div className="p-2 bg-purple-100 rounded text-sm text-center">Personal</div>
+            {/* Legend */}
+            <div className="mt-4 grid grid-cols-4 gap-2">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded text-sm text-center">Work</div>
+              <div className="p-2 bg-green-100 dark:bg-green-900 rounded text-sm text-center">Learning</div>
+              <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded text-sm text-center">Break</div>
+              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded text-sm text-center">Personal</div>
+            </div>
+
+            {/* Contact / Links Section */}
+            <div className="mt-8 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg shadow">
+              <h2 className="text-2xl font-bold text-center mb-4">Connect with Me</h2>
+              <p className="text-center text-gray-600 dark:text-gray-300 mb-4">
+                Have feedback, suggestions, or need support? Reach out through any platform below.
+              </p>
+              <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                <a
+                  href="mailto:akshaysatyam2003@gmail.com"
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Email
+                </a>
+                <a
+                  href="https://github.com/akshaysatyam2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800"
+                >
+                  GitHub
+                </a>
+                <a
+                  href="https://linkedin.com/in/akshaysatyam2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  LinkedIn
+                </a>
+                <a
+                  href="https://x.com/akshaysatyam2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-700"
+                >
+                  X (Twitter)
+                </a>
+                <a
+                  href="https://kaggle.com/akshaysatyam2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                >
+                  Kaggle
+                </a>
+                <a
+                  href="https://instagram.com/akshaysatyam2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-pink-500 text-white rounded hover:bg-pink-600"
+                >
+                  Instagram
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       );
     };
 
-    ReactDOM.render(<ScheduleVisualizer />, document.getElementById('root'));
+    ReactDOM.render(<App />, document.getElementById("root"));
   </script>
 </body>
 </html>
